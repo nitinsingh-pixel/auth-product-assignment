@@ -11,9 +11,24 @@ app.use(express.json())
 app.use(cookieParser())
 
 const corsOptions = {
-    origin: config.FRONTEND_URL,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const cleanOrigin = origin.replace(/\/$/, "");
+        const configuredOrigin = config.FRONTEND_URL?.replace(/\/$/, "");
+
+        if (
+            cleanOrigin === configuredOrigin ||
+            cleanOrigin === "http://localhost:5173" ||
+            cleanOrigin === "http://localhost:3000" ||
+            cleanOrigin.endsWith(".vercel.app")
+        ) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
 }
 
 app.use(cors(corsOptions))
