@@ -9,7 +9,7 @@ const productRouter = Router();
 productRouter.post("/create", authenticateUser, upload.single('image'), productValidation, createProduct);
 productRouter.get("/", getAllProducts);
 productRouter.get("/:id", paramValidation, getProduct);
-productRouter.put("/update/:id", paramValidation, authenticateUser, productValidation, updateProduct);
+productRouter.put("/update/:id", paramValidation, authenticateUser, upload.single('image'), productValidation, updateProduct);
 productRouter.delete("/delete/:id", paramValidation, authenticateUser, deleteProduct);
 
 export default productRouter;

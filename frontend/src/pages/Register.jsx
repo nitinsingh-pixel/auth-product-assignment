@@ -22,24 +22,21 @@ const Register = () => {
   const navigate = useNavigate()
   
   const onSubmit = async(data) => {
-    
     try {
-
-        const res = await api.post("/api/auth/register", data)
+        const res = await api.post("/api/auth/register", data);
         setAccessToken(res.data.accessToken);
         setUser(res.data.newUser);
-        setLoading(false)
+        setLoading(false);
 
-        navigate("/home",{ replace: true})
-
-      } catch (error) {
-      console.log(error)
-      alert(
-        error.response?.data?.message ||
-        "Failed to delete product"
-      );
-      }
-    
+        navigate("/home", { replace: true });
+    } catch (error) {
+        console.error("Register error:", error);
+        const msg = error.response?.data?.message ||
+                    error.response?.data?.errors?.[0]?.msg ||
+                    error.message ||
+                    "Registration failed. Please check your details.";
+        alert(msg);
+    }
   };
 
   
@@ -108,7 +105,7 @@ const Register = () => {
               {...register("password", {
                 required: "Password is required",
                 minLength: {
-                  value: 8,
+                  value: 6,
                   message: "Password must be at least 6 characters",
                 },
               })}

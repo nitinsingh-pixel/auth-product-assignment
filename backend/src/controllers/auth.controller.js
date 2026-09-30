@@ -11,7 +11,10 @@ export const Register = async (req, res) => {
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() })
+            return res.status(400).json({
+                message: errors.array().map(e => e.msg).join(", "),
+                errors: errors.array()
+            })
         }
 
         const { name, email, password } = req.body;
@@ -70,7 +73,8 @@ export const Login = async (req, res) => {
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
-            return res.status(422).json({
+            return res.status(400).json({
+                message: errors.array().map(e => e.msg).join(", "),
                 errors: errors.array()
             })
         }
@@ -80,8 +84,8 @@ export const Login = async (req, res) => {
         const user = await userModel.findOne({ email }).select("+password");
 
         if (!user) {
-            return res.status(404).json({
-                message: "User not found"
+            return res.status(401).json({
+                message: "Invalid email or password"
             })
         }
 
@@ -89,7 +93,7 @@ export const Login = async (req, res) => {
 
         if (!passwordMatch) {
             return res.status(401).json({
-                message: "Invalid credentails"
+                message: "Invalid email or password"
             })
         }
 

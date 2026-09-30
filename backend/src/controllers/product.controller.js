@@ -9,38 +9,44 @@ export const createProduct = async (req, res) => {
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() })
+            return res.status(400).json({
+                message: errors.array().map(e => e.msg).join(", "),
+                errors: errors.array()
+            });
         }
 
         const { name, price, description, category, stock } = req.body;
 
-        if (!req.file) {
-            return res.status(409).json({
-                message: "Please upload the photo"
-            })
+        let image = "";
+        if (req.file) {
+            try {
+                const result = await imageKit.upload({
+                    file: req.file.buffer.toString('base64'),
+                    fileName: req.file.originalname,
+                    folder: '/products'
+                });
+                image = result.url;
+            } catch (imgErr) {
+                console.error("ImageKit error, using fallback image:", imgErr.message);
+                image = `https://picsum.photos/seed/${encodeURIComponent(name)}/600/400`;
+            }
+        } else {
+            image = `https://picsum.photos/seed/${encodeURIComponent(name)}/600/400`;
         }
-
-        const result = await imageKit.upload({
-            file: req.file.buffer.toString('base64'),
-            fileName: req.file.originalname,
-            folder: '/products'
-        });
-
-        const image = result.url
 
         const product = await productModel.create({
             name,
-            price,
+            price: Number(price),
             description,
             category,
-            stock,
+            stock: Number(stock),
             image
-        })
+        });
 
         return res.status(201).json({
             message: "Product created successfully",
             product
-        })
+        });
 
     } catch (error) {
         return res.status(500).json({
@@ -101,28 +107,54 @@ export const updateProduct = async (req, res) => {
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
-            return res.status(422).json({ errors: errors.array() })
+            return res.status(400).json({
+                message: errors.array().map(e => e.msg).join(", "),
+                errors: errors.array()
+            });
         }
         
-        const { name, price, description, stock, category } = req.body;
-
+        const { name, price, description, stock, category, removeImage } = req.body;
         const { id } = req.params;
-        
+
+        const existingProduct = await productModel.findById(id);
+        if (!existingProduct) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        let image = existingProduct.image;
+        if (removeImage === 'true' || removeImage === true) {
+            image = `https://picsum.photos/seed/${encodeURIComponent(name || existingProduct.name)}/600/400`;
+        }
+
+        if (req.file) {
+            try {
+                const result = await imageKit.upload({
+                    file: req.file.buffer.toString('base64'),
+                    fileName: req.file.originalname,
+                    folder: '/products'
+                });
+                image = result.url;
+            } catch (imgErr) {
+                console.error("Image upload failed, fallback:", imgErr.message);
+                image = `https://picsum.photos/seed/${encodeURIComponent(name || existingProduct.name)}/600/400`;
+            }
+        }
 
         const product = await productModel.findByIdAndUpdate(id, {
             name,
-            price,
+            price: Number(price),
             description,
-            stock,
-            category
+            stock: Number(stock),
+            category,
+            image
         }, {
             new: true
-        })
+        });
 
         return res.status(200).json({
             message: "Product updated successfully",
             product
-        })
+        });
 
     } catch (error) {
         return res.status(500).json({

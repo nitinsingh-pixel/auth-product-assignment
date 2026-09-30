@@ -1,20 +1,40 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import useApi from "../utils/axiosInstance.utils";
 import { useNavigate } from "react-router";
 
 const CreateProduct = () => {
     const api = useApi();
+    const [imagePreview, setImagePreview] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const {
         register,
         handleSubmit,
         formState: { errors },
         reset,
+        watch,
     } = useForm();
 
     const navigate = useNavigate();
+
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImagePreview(URL.createObjectURL(file));
+        } else {
+            setImagePreview(null);
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setImagePreview(null);
+        reset({ ...watch(), image: null });
+    };
+
     const onSubmit = async (data) => {
         try {
+            setIsSubmitting(true);
             const formData = new FormData();
 
             formData.append("name", data.name);
@@ -22,15 +42,25 @@ const CreateProduct = () => {
             formData.append("stock", data.stock);
             formData.append("price", data.price);
             formData.append("category", data.category);
-            formData.append("image", data.image[0]);
+            if (data.image && data.image[0]) {
+                formData.append("image", data.image[0]);
+            }
 
-            const res = await api.post("/api/products/create", formData);
+            await api.post("/api/products/create", formData);
 
-            console.log(res.data);
-
+            alert("Product created successfully!");
             reset();
+            setImagePreview(null);
+            navigate("/home");
         } catch (error) {
-            console.log(error);
+            console.error("Create product error:", error);
+            const msg = error.response?.data?.message ||
+                        error.response?.data?.errors?.[0]?.msg ||
+                        error.message ||
+                        "Failed to create product";
+            alert(msg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -196,9 +226,29 @@ const CreateProduct = () => {
                             accept="image/*"
                             className="w-full border border-gray-300 rounded-lg px-4 py-3"
                             {...register("image", {
-                                required: "Product image is required",
+                                onChange: handleImageChange
                             })}
                         />
+
+                        {imagePreview && (
+                            <div className="mt-3 flex items-center gap-4 p-2 bg-gray-50 border rounded-lg">
+                                <img
+                                    src={imagePreview}
+                                    alt="Preview"
+                                    className="w-20 h-20 object-cover rounded-md"
+                                />
+                                <div className="flex-1">
+                                    <p className="text-xs text-gray-500">Image selected</p>
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveImage}
+                                        className="mt-1 text-xs text-red-600 hover:text-red-800 font-semibold"
+                                    >
+                                        ✕ Remove Image
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {errors.image && (
                             <p className="text-red-500 text-sm mt-1">
@@ -210,9 +260,11 @@ const CreateProduct = () => {
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full bg-black text-white rounded-lg py-3 font-medium hover:bg-gray-800 transition"
+                        disabled={isSubmitting}
+                        className="w-full bg-black text-white rounded-lg py-3 font-medium hover:bg-gray-800 transition disabled:opacity-50"
                     >
-                        Create Product
+                        {isSubmitting ? "Creating..." : "Create Product"}
+                    </button>
                     </button>
 
                 </form>
